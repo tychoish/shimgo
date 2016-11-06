@@ -25,18 +25,20 @@ func init() {
 type shimServer struct {
 	running          bool
 	terminated       bool
+	pid              int
 	uri              string
 	workingDirectory string
-	pid              int
 	errors           []string
 	done             chan struct{}
+	closed           chan struct{}
 	sync.RWMutex
 }
 
 func newServer() *shimServer {
 	server = &shimServer{
-		done: make(chan struct{}),
-		uri:  "http://localhost:1414/",
+		done:   make(chan struct{}),
+		closed: make(chan struct{}),
+		uri:    "http://localhost:1414/",
 	}
 
 	tmpdir, err := ioutil.TempDir("", "shimgo-")
@@ -77,6 +79,7 @@ func (s *shimServer) start() {
 		cmd := exec.Command(getPython2(), filepath.Join(s.workingDirectory, service))
 		err := cmd.Start()
 
+		s.pid = cmd.Process.Pid
 		// should replace the sleep with a better way to make
 		// sure that the process is running
 		time.Sleep(500 * time.Millisecond)
@@ -88,7 +91,6 @@ func (s *shimServer) start() {
 			return
 		}
 
-		s.pid = cmd.Process.Pid
 		s.running = true
 		s.Unlock()
 
@@ -100,9 +102,10 @@ func (s *shimServer) start() {
 		s.Lock()
 		s.terminated = true
 		s.running = false
+		s.pid = 0
 		s.Unlock()
 
-		s.done <- struct{}{}
+		s.closed <- struct{}{}
 	}()
 
 	<-ready
@@ -118,6 +121,7 @@ func (s *shimServer) stop() {
 	}
 
 	s.done <- struct{}{}
+	<-s.closed
 }
 
 func (s *shimServer) startIfNeeded() error {

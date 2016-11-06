@@ -141,9 +141,9 @@ func TestServerStopIsSafeToRunAfterCleanup(t *testing.T) {
 	assert(t, s.isRunning(), "server should run after its started")
 
 	s.stop()
-	assert(t, s.hasTerminated(), "server knows it's terminated")
-	assert(t, !s.isRunning(), "server shouldn't be running  after its started")
+	assert(t, s.hasTerminated(), "server knows it's terminated (0)")
+	assert(t, !s.isRunning(), "server shouldn't be running  after its started (0)")
 	s.stop()
-	assert(t, s.hasTerminated(), "server knows it's terminated")
-	assert(t, !s.isRunning(), "server shouldn't be running  after its started")
+	assert(t, s.hasTerminated(), "server knows it's terminated (1)")
+	assert(t, !s.isRunning(), "server shouldn't be running  after its started (1)")
 }
