@@ -64,10 +64,7 @@ func TestStartingService(t *testing.T) {
 	s.start()
 	require(t, s.running, "server should be running after starting, but isn't", fmt.Sprintf("%+v", s))
 	assert(t, s.isRunning(), "isRunning method should reflect that server is running")
-
 	assert(t, !s.hasTerminated(), "server should not report terminated before it has")
-
-	assert(t, s.supportsConversion(ASCIIDOC), "server should almost always support asciidoc")
 }
 
 func TestStartIfNeeded(t *testing.T) {
