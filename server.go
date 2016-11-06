@@ -72,6 +72,8 @@ func (s *shimServer) start() {
 			return
 		}
 
+		defer os.RemoveAll(s.workingDirectory)
+
 		cmd := exec.Command(getPython2(), filepath.Join(s.workingDirectory, service))
 		err := cmd.Start()
 
@@ -111,21 +113,11 @@ func (s *shimServer) stop() {
 		return
 	}
 
-	if s.isRunning() {
-		s.done <- struct{}{}
-	}
-
-	defer os.RemoveAll(s.workingDirectory)
-
-	// this is just safety; signal is sent from the background process
-	<-s.done
-	proc, err := os.FindProcess(s.pid)
-	if err != nil {
+	if !s.isRunning() {
 		return
 	}
-	proc.Kill()
 
-	return
+	s.done <- struct{}{}
 }
 
 func (s *shimServer) startIfNeeded() error {
