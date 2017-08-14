@@ -28,7 +28,7 @@ func ConvertFromAsciiDoc(content []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return server.doConversion(RST, content)
+	return server.doConversion(ASCIIDOC, content)
 }
 
 func SupportsAsciiDoc() bool {
