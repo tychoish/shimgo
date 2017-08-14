@@ -16,13 +16,9 @@ import (
 	"time"
 )
 
-var server *shimServer
-
-func init() {
-	server = newServer()
-}
-
 type shimServer struct {
+	backend          Backend
+	supportedFormats []Format
 	running          bool
 	terminated       bool
 	pid              int
@@ -34,18 +30,23 @@ type shimServer struct {
 	sync.RWMutex
 }
 
-func newServer() *shimServer {
-	server = &shimServer{
-		done:   make(chan struct{}),
-		closed: make(chan struct{}),
-		uri:    "http://localhost:1414/",
+func newServer(backend Backend) *shimServer {
+	var server = &shimServer{
+		backend: backend,
+		done:    make(chan struct{}),
+		closed:  make(chan struct{}),
+		uri:     string(backend),
 	}
 
+	newWorkingDirectory(server)
+
+	return server
+}
+
+func newWorkingDirectory(server *shimServer) {
 	tmpdir, err := ioutil.TempDir("", "shimgo-")
 	server.workingDirectory = tmpdir
 	server.addError(err)
-
-	return server
 }
 
 func (s *shimServer) addError(err error) {
@@ -67,16 +68,23 @@ func (s *shimServer) start() {
 			return
 		}
 
-		if err := writePythonFiles(s.workingDirectory); err != nil {
-			s.errors = append(s.errors, err.Error())
-			s.Unlock()
-			ready <- struct{}{}
-			return
+		switch s.backend {
+		case PYTHON:
+			if err := writePythonFiles(s.workingDirectory); err != nil {
+				s.errors = append(s.errors, err.Error())
+				s.Unlock()
+				ready <- struct{}{}
+				return
+			}
 		}
 
 		defer os.RemoveAll(s.workingDirectory)
 
-		cmd := exec.Command(getPython2(), filepath.Join(s.workingDirectory, service))
+		var cmd *exec.Cmd
+		switch s.backend {
+		case PYTHON:
+			cmd = exec.Command(getPython2(), filepath.Join(s.workingDirectory, pythonService))
+		}
 		err := cmd.Start()
 
 		s.pid = cmd.Process.Pid
@@ -122,6 +130,20 @@ func (s *shimServer) stop() {
 
 	s.done <- struct{}{}
 	<-s.closed
+}
+
+func (s *shimServer) reset() {
+	s.Lock()
+	s.supportedFormats = []Format{}
+	s.running = false
+	s.terminated = false
+	s.pid = 0
+	s.uri = string(s.backend)
+	s.errors = []string{}
+	s.done = make(chan struct{})
+	s.closed = make(chan struct{})
+	newWorkingDirectory(s)
+	s.Unlock()
 }
 
 func (s *shimServer) startIfNeeded() error {
@@ -209,6 +231,11 @@ func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
 }
 
 func (s *shimServer) supportsConversion(format Format) bool {
+	for _, supportedFormat := range s.supportedFormats {
+		if format == supportedFormat {
+			return true
+		}
+	}
 	response, err := http.DefaultClient.Get(s.uri + "support/" + string(format))
 	if err != nil {
 		return false
@@ -218,5 +245,6 @@ func (s *shimServer) supportsConversion(format Format) bool {
 		return false
 	}
 
+	s.supportedFormats = append(s.supportedFormats, format)
 	return true
 }

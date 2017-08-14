@@ -18,9 +18,9 @@ var (
 )
 
 const (
-	service     = "service.py"
-	asciidoc    = "asciidoc.py"
-	asciidocapi = "asciidocapi.py"
+	pythonService = "service.py"
+	asciidoc      = "asciidoc.py"
+	asciidocapi   = "asciidocapi.py"
 )
 
 func writePythonFiles(workingDir string) error {
@@ -58,7 +58,7 @@ func getPython2() string {
 
 func init() {
 	pythonFiles = map[string][]byte{
-		service: []byte(`
+		pythonService: []byte(`
 import logging
 
 try:

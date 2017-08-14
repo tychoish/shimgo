@@ -33,9 +33,9 @@ func cleanup(t *testing.T, s *shimServer) {
 		proc, err := os.FindProcess(s.pid)
 		if err != nil {
 			err = proc.Kill()
-			require(t, err == nil, "kill service prod", err)
+			require(t, err == nil, "kill service proc", err)
 		}
-
+		s.stop()
 	}
-
+	s.reset()
 }
