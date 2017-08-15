@@ -48,7 +48,7 @@ func ConvertFromAsciiDoc(content []byte) ([]byte, error) {
 		if err := server.startIfNeeded(); err != nil {
 			return nil, err
 		}
-
+    
 		if server.supportsConversion(ASCIIDOC) {
 			return server.doConversion(ASCIIDOC, content)
 		}
