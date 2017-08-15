@@ -35,7 +35,8 @@ func cleanup(t *testing.T, s *shimServer) {
 			err = proc.Kill()
 			require(t, err == nil, "kill service proc", err)
 		}
-		s.stop()
 	}
-	s.reset()
+	s.Lock()
+	defer s.Unlock()
+	s.setup()
 }

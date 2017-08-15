@@ -2,6 +2,7 @@ package shimgo
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,15 +10,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
 
 type shimServer struct {
-	backend          Backend
+	backend          backend
 	supportedFormats []Format
 	running          bool
 	terminated       bool
@@ -25,28 +24,37 @@ type shimServer struct {
 	uri              string
 	workingDirectory string
 	errors           []string
-	done             chan struct{}
 	closed           chan struct{}
+	cancelServer     context.CancelFunc
 	sync.RWMutex
 }
 
-func newServer(backend Backend) *shimServer {
-	var server = &shimServer{
-		backend: backend,
-		done:    make(chan struct{}),
-		closed:  make(chan struct{}),
-		uri:     string(backend),
+func newServer(b backend) *shimServer {
+	server := &shimServer{
+		backend: b,
 	}
-
-	newWorkingDirectory(server)
+	server.setup()
 
 	return server
 }
 
-func newWorkingDirectory(server *shimServer) {
+func (s *shimServer) setup() {
+	// unsafe, must be called by someone who has exclusive access
+	// to the struct
+
+	s.supportedFormats = []Format{}
+	s.running = false
+	s.terminated = false
+	s.pid = 0
+	s.uri = string(s.backend)
+	s.errors = []string{}
+	s.closed = make(chan struct{})
+
 	tmpdir, err := ioutil.TempDir("", "shimgo-")
-	server.workingDirectory = tmpdir
-	server.addError(err)
+	if err != nil {
+		s.errors = append(s.errors, err.Error())
+	}
+	s.workingDirectory = tmpdir
 }
 
 func (s *shimServer) addError(err error) {
@@ -60,31 +68,33 @@ func (s *shimServer) addError(err error) {
 
 func (s *shimServer) start() {
 	ready := make(chan struct{})
+	ctx := context.TODO()
 	go func() {
 		s.Lock()
+		ctx, s.cancelServer = context.WithCancel(ctx)
 		if s.running {
 			s.Unlock()
 			ready <- struct{}{}
 			return
 		}
 
-		switch s.backend {
-		case PYTHON:
-			if err := writePythonFiles(s.workingDirectory); err != nil {
-				s.errors = append(s.errors, err.Error())
-				s.Unlock()
-				ready <- struct{}{}
-				return
-			}
+		if err := s.backend.writeFiles(s.workingDirectory); err != nil {
+			s.errors = append(s.errors, err.Error())
+			s.Unlock()
+			ready <- struct{}{}
+			return
 		}
 
 		defer os.RemoveAll(s.workingDirectory)
 
-		var cmd *exec.Cmd
-		switch s.backend {
-		case PYTHON:
-			cmd = exec.Command(getPython2(), filepath.Join(s.workingDirectory, pythonService))
+		cmd := s.backend.getCommand(s.workingDirectory)
+		if cmd == nil {
+			s.errors = append(s.errors, "unsupported backend")
+			s.Unlock()
+			ready <- struct{}{}
+			return
 		}
+
 		err := cmd.Start()
 
 		s.pid = cmd.Process.Pid
@@ -104,16 +114,16 @@ func (s *shimServer) start() {
 
 		ready <- struct{}{}
 
-		<-s.done
+		<-ctx.Done()
 		cmd.Process.Kill()
 
 		s.Lock()
+		defer s.Unlock()
 		s.terminated = true
 		s.running = false
 		s.pid = 0
-		s.Unlock()
 
-		s.closed <- struct{}{}
+		close(s.closed)
 	}()
 
 	<-ready
@@ -128,22 +138,24 @@ func (s *shimServer) stop() {
 		return
 	}
 
-	s.done <- struct{}{}
+	s.terminateServer()
 	<-s.closed
 }
 
+func (s *shimServer) terminateServer() {
+	s.RLock()
+	defer s.RUnlock()
+	if s.cancelServer != nil {
+		s.cancelServer()
+	}
+}
+
 func (s *shimServer) reset() {
+	s.stop()
+
 	s.Lock()
-	s.supportedFormats = []Format{}
-	s.running = false
-	s.terminated = false
-	s.pid = 0
-	s.uri = string(s.backend)
-	s.errors = []string{}
-	s.done = make(chan struct{})
-	s.closed = make(chan struct{})
-	newWorkingDirectory(s)
-	s.Unlock()
+	defer s.Unlock()
+	s.setup()
 }
 
 func (s *shimServer) startIfNeeded() error {
@@ -197,10 +209,6 @@ func (s *shimServer) getError() error {
 }
 
 func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
-	if format != ASCIIDOC && format != RST {
-		return nil, fmt.Errorf("%s is not a supported format", format)
-	}
-
 	response, err := http.DefaultClient.Post(s.uri+string(format), "text/plain", bytes.NewReader(input))
 	if err != nil {
 		return nil, err
@@ -236,6 +244,7 @@ func (s *shimServer) supportsConversion(format Format) bool {
 			return true
 		}
 	}
+
 	response, err := http.DefaultClient.Get(s.uri + "support/" + string(format))
 	if err != nil {
 		return false

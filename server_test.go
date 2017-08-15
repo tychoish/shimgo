@@ -9,15 +9,14 @@ import (
 )
 
 func TestServersHaveCorrectInitialValues(t *testing.T) {
-	assert(t, servers != nil, "global instance is initialized")
+	assert(t, serverCache != nil, "global instance is initialized")
 
-	assert(t, len(servers) == 1, "servers are less than expected")
-	for _, server := range servers {
-		assert(t, len(server.done) == 0, "done has len")
+	assert(t, len(serverCache.backends) == 2, "servers are less than expected")
+	for _, server := range serverCache.backends {
 		assert(t, len(server.errors) == 0, "there are no errors")
 		assert(t, len(server.workingDirectory) != 0, "working is defined", server.workingDirectory)
 		_, err := os.Stat(server.workingDirectory)
-		assert(t, !os.IsNotExist(err), "working directory exists")
+		assert(t, !os.IsNotExist(err), "working directory exists:", server.workingDirectory)
 
 		assert(t, server.pid == 0, "pid is zeroed")
 
@@ -26,7 +25,7 @@ func TestServersHaveCorrectInitialValues(t *testing.T) {
 }
 
 func TestAddError(t *testing.T) {
-	for _, s := range servers {
+	for _, s := range serverCache.backends {
 		assert(t, len(s.errors) == 0, "there should be no errors and there are:", len(s.errors))
 		assert(t, !s.hasError(), "has error should not report error but does")
 		assert(t, s.getError() == nil, "get error should be nil")
@@ -62,7 +61,7 @@ func TestAddError(t *testing.T) {
 }
 
 func TestStartingService(t *testing.T) {
-	for _, s := range servers {
+	for _, s := range serverCache.backends {
 		require(t, !s.running, "server shouldn't be running at start, but is", fmt.Sprintf("%+v", s))
 		assert(t, !s.isRunning(), "isRunning method should reflect that server is not yet running")
 		s.start()
@@ -75,7 +74,7 @@ func TestStartingService(t *testing.T) {
 }
 
 func TestStartIfNeeded(t *testing.T) {
-	for _, s := range servers {
+	for _, s := range serverCache.backends {
 		require(t, !s.running, "server shouldn't be running at start, but is", fmt.Sprintf("%+v", s))
 		assert(t, !s.isRunning(), "isRunning method should reflect that server is not yet running")
 
@@ -110,7 +109,7 @@ func TestStartIfNeeded(t *testing.T) {
 }
 
 func TestErrorConditionsWhenStarting(t *testing.T) {
-	for _, s := range servers {
+	for _, s := range serverCache.backends {
 		wd := s.workingDirectory
 		_, err := os.Stat(wd)
 		assert(t, !os.IsNotExist(err), "working directory should be created by constructor:", wd)
@@ -132,7 +131,7 @@ func TestErrorConditionsWhenStarting(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-	for _, s := range servers {
+	for _, s := range serverCache.backends {
 		s.start()
 		assert(t, s.isRunning(), "server should run after its started")
 
@@ -145,7 +144,7 @@ func TestStartStop(t *testing.T) {
 }
 
 func TestServersStopIsSafeToRunAfterCleanup(t *testing.T) {
-	for _, s := range servers {
+	for _, s := range serverCache.backends {
 		s.start()
 		assert(t, s.isRunning(), "server should run after its started")
 

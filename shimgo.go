@@ -1,79 +1,21 @@
 package shimgo
 
 import (
-	"errors"
 	"fmt"
 )
 
-var servers []*shimServer
+func Cleanup()                                           { serverCache.cleanup() }
+func Reset()                                             { serverCache.reset() }
+func SupportsRst() bool                                  { _, ok := serverCache.getServer(RST); return ok }
+func SupportsAsciiDoc() bool                             { _, ok := serverCache.getServer(ASCIIDOC); return ok }
+func ConvertFromRst(content []byte) ([]byte, error)      { return convertHelper(RST, content) }
+func ConvertFromAsciiDoc(content []byte) ([]byte, error) { return convertHelper(ASCIIDOC, content) }
 
-func init() {
-	servers = append(servers, newServer(PYTHON))
-}
-
-func Cleanup() {
-	for _, server := range servers {
-		server.stop()
+func convertHelper(f Format, content []byte) ([]byte, error) {
+	server, ok := serverCache.getServer(f)
+	if !ok {
+		return nil, fmt.Errorf("No suitable backend was found for %s", f)
 	}
-}
 
-func Reset() {
-	for _, server := range servers {
-		wasRunning := server.isRunning()
-
-		server.stop()
-		server.reset()
-
-		if wasRunning {
-			server.start()
-		}
-	}
-}
-
-func ConvertFromRst(content []byte) ([]byte, error) {
-	for _, server := range servers {
-		if err := server.startIfNeeded(); err != nil {
-			return nil, err
-		}
-
-		if server.supportsConversion(RST) {
-			return server.doConversion(RST, content)
-		}
-	}
-	return nil, errors.New(fmt.Sprintf("No suitable backend was found for %s", RST))
-}
-
-func ConvertFromAsciiDoc(content []byte) ([]byte, error) {
-	for _, server := range servers {
-		if err := server.startIfNeeded(); err != nil {
-			return nil, err
-		}
-
-		if server.supportsConversion(ASCIIDOC) {
-			return server.doConversion(ASCIIDOC, content)
-		}
-	}
-	return nil, errors.New(fmt.Sprintf("No suitable backend was found for %s", ASCIIDOC))
-}
-
-func SupportsRst() bool {
-	for _, server := range servers {
-		if err := server.startIfNeeded(); err != nil {
-			return false
-		}
-
-		return server.supportsConversion(RST)
-	}
-	return false
-}
-
-func SupportsAsciiDoc() bool {
-	for _, server := range servers {
-		if err := server.startIfNeeded(); err != nil {
-			return false
-		}
-
-		return server.supportsConversion(ASCIIDOC)
-	}
-	return false
+	return server.doConversion(f, content)
 }
