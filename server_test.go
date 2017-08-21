@@ -11,7 +11,7 @@ import (
 func TestServersHaveCorrectInitialValues(t *testing.T) {
 	assert(t, serverCache != nil, "global instance is initialized")
 
-	assert(t, len(serverCache.backends) == 2, "servers are less than expected")
+	assert(t, len(serverCache.backends) == 3, "servers are less than expected")
 	for _, server := range serverCache.backends {
 		assert(t, len(server.errors) == 0, "there are no errors")
 		assert(t, len(server.workingDirectory) != 0, "working is defined", server.workingDirectory)

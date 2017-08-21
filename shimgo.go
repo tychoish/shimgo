@@ -8,8 +8,12 @@ func Cleanup()                                           { serverCache.cleanup()
 func Reset()                                             { serverCache.reset() }
 func SupportsRst() bool                                  { _, ok := serverCache.getServer(RST); return ok }
 func SupportsAsciiDoc() bool                             { _, ok := serverCache.getServer(ASCIIDOC); return ok }
+func SupportsAsciidoctor() bool                          { _, ok := serverCache.getServer(ASCIIDOCTOR); return ok }
 func ConvertFromRst(content []byte) ([]byte, error)      { return convertHelper(RST, content) }
 func ConvertFromAsciiDoc(content []byte) ([]byte, error) { return convertHelper(ASCIIDOC, content) }
+func ConvertFromAsciidoctor(content []byte) ([]byte, error) {
+	return convertHelper(ASCIIDOCTOR, content)
+}
 
 func convertHelper(f Format, content []byte) ([]byte, error) {
 	server, ok := serverCache.getServer(f)

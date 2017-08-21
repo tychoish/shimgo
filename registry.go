@@ -13,13 +13,13 @@ type servers struct {
 
 func init() {
 	pyserver := newServer(pythonServer)
-	// rberver := newServer(rubyBackend)
+	rbserver := newServer(rubyServer)
 
 	serverCache = &servers{
 		backends: map[Format]*shimServer{
-			RST:      pyserver,
-			ASCIIDOC: pyserver,
-			//ASCIIDOCTOR: rubyServer,
+			RST:         pyserver,
+			ASCIIDOC:    pyserver,
+			ASCIIDOCTOR: rbserver,
 		},
 	}
 }
