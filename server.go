@@ -209,6 +209,8 @@ func (s *shimServer) getError() error {
 }
 
 func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
+	s.startIfNeeded()
+
 	response, err := http.DefaultClient.Post(s.uri+string(format), "text/plain", bytes.NewReader(input))
 	if err != nil {
 		return nil, err
@@ -244,6 +246,8 @@ func (s *shimServer) supportsConversion(format Format) bool {
 			return true
 		}
 	}
+
+	s.startIfNeeded()
 
 	response, err := http.DefaultClient.Get(s.uri + "support/" + string(format))
 	if err != nil {
