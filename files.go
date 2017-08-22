@@ -6707,6 +6707,10 @@ if __name__ == "__main__":
 	}
 	rubyFiles = map[string][]byte{
 		rubyService: []byte(`
+# See the full source and documentation here:
+# https://github.com/miltador/shimgo-ruby
+# For contributing to this script, please send
+# your pull requests to the mentioned repo.
 require 'sinatra'
 
 adoctor_supported = false
@@ -6733,6 +6737,8 @@ end
 set :bind, 'localhost'
 set :port, 1515
 set :threaded, true
+set :quiet, true
+set :logging, false
 
 get '/' do
   response = { status: 'running', asciidoctor: adoctor_supported }
@@ -6761,11 +6767,17 @@ post '/asciidoctor' do
                                   if ENV['SHIMGO_ASCIIDOCTOR_REQUIRES'].nil?
                                     []
                                   else
-                                    ENV['SHIMGO_ASCIIDOCTOR_REQUIRES'].split(',')
+                                    ENV['SHIMGO_ASCIIDOCTOR_REQUIRES']
+                                        .split(',')
                                   end)
   end
 
-  response = { info: captured_output.gsub(' <stdin>:', ''), content: content }
+  response = { info: if captured_output.nil?
+                       ''
+                     else
+                       captured_output.gsub(' <stdin>:', '')
+                     end,
+               content: content }
   content_type('application/json')
   return JSON.generate(response)
 end`),
