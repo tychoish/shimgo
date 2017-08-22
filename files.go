@@ -6716,6 +6716,18 @@ require 'sinatra'
 adoctor_supported = false
 begin
   require 'asciidoctor'
+  extensions = ENV['SHIMGO_ASCIIDOCTOR_REQUIRES']
+  unless extensions.nil?
+    extensions.split(',').each do |path|
+      begin
+        require path
+      rescue ::LoadError
+        $stderr.puts %(asciidoctor: FAILED: '#{path}' could not be loaded)
+      rescue ::SystemExit
+        # ignore
+      end
+    end
+  end
   adoctor_supported = true
 rescue LoadError
   adoctor_supported = false
@@ -6762,14 +6774,7 @@ post '/asciidoctor' do
   captured_output = capture_stderr do
     content = Asciidoctor.convert request.body.read,
                                   header_footer: false,
-                                  safe: Asciidoctor::SafeMode::SAFE,
-                                  requires: (
-                                  if ENV['SHIMGO_ASCIIDOCTOR_REQUIRES'].nil?
-                                    []
-                                  else
-                                    ENV['SHIMGO_ASCIIDOCTOR_REQUIRES']
-                                        .split(',')
-                                  end)
+                                  safe: Asciidoctor::SafeMode::SAFE
   end
 
   response = { info: if captured_output.nil?
