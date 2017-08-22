@@ -6736,7 +6736,7 @@ end
 
 set :bind, 'localhost'
 set :port, 1515
-set :threaded, true
+set :threaded, false
 set :quiet, true
 set :logging, false
 
