@@ -215,6 +215,10 @@ func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if response.StatusCode != 200 {
+		return nil, errors.New(response.Status)
+	}
+
 	output := bytes.NewBuffer([]byte{})
 	_, err = io.Copy(output, response.Body)
 	response.Body.Close()
