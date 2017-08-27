@@ -16,9 +16,9 @@ const (
 func (b backend) writeFiles(workingDirectory string) error {
 	switch b {
 	case pythonServer:
-		return writePythonFiles(workingDirectory)
+		return writeFiles([]string{pythonService, asciidoc, asciidocapi}, workingDirectory)
 	case rubyServer:
-		return writeRubyFiles(workingDirectory)
+		return writeFiles([]string{rubyService}, workingDirectory)
 	default:
 		return errors.New("unsupported backend")
 	}

@@ -3,6 +3,7 @@ package shimgo
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -10,8 +11,7 @@ import (
 	"strings"
 )
 
-var pythonFiles map[string][]byte
-var rubyFiles map[string][]byte
+var serviceFiles map[string][]byte
 
 var (
 	backtickSubstitute = []byte("[BACKTICK]")
@@ -25,10 +25,15 @@ const (
 	rubyService   = "service.rb"
 )
 
-func writePythonFiles(workingDir string) error {
+func writeFiles(fns []string, workingDir string) error {
 	errs := []string{}
 
-	for fn, content := range pythonFiles {
+	for _, fn := range fns {
+		content, ok := serviceFiles[fn]
+		if !ok {
+			errs = append(errs, fmt.Sprintf("could not find service file %s", fn))
+		}
+
 		path := filepath.Join(workingDir, fn)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			err = ioutil.WriteFile(path, content, 0644)
@@ -58,26 +63,6 @@ func getPython2() string {
 	return "python"
 }
 
-func writeRubyFiles(workingDir string) error {
-	errs := []string{}
-
-	for fn, content := range rubyFiles {
-		path := filepath.Join(workingDir, fn)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			err = ioutil.WriteFile(path, content, 0644)
-			if err != nil {
-				errs = append(errs, err.Error())
-			}
-		}
-	}
-
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
-	}
-
-	return nil
-}
-
 func getRuby() string {
 	path, err := exec.LookPath("ruby")
 	if err == nil {
@@ -92,7 +77,7 @@ func getRuby() string {
 }
 
 func init() {
-	pythonFiles = map[string][]byte{
+	serviceFiles = map[string][]byte{
 		pythonService: []byte(`
 import logging
 
@@ -6704,8 +6689,6 @@ if __name__ == "__main__":
     print(test_result)
     sys.exit(test_result.failed > 0)
 `), backtickSubstitute, backtick, -1),
-	}
-	rubyFiles = map[string][]byte{
 		rubyService: []byte(`
 # See the full source and documentation here:
 # https://github.com/miltador/shimgo-ruby

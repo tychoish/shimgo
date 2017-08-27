@@ -97,7 +97,6 @@ func (s *shimServer) start() {
 
 		err := cmd.Start()
 
-		s.pid = cmd.Process.Pid
 		// should replace the sleep with a better way to make
 		// sure that the process is running
 		time.Sleep(500 * time.Millisecond)
@@ -108,6 +107,8 @@ func (s *shimServer) start() {
 			ready <- struct{}{}
 			return
 		}
+
+		s.pid = cmd.Process.Pid
 
 		s.running = true
 		s.Unlock()
