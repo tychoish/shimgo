@@ -126,7 +126,7 @@ def rst():
     overrides = {"warning_stream": err, "leave-comments": True, "initial-header-level": 2}
     content = docutils.core.publish_parts(flask.request.data,
                                           settings_overrides=overrides,
-                                          writer_name="html")['body']
+                                          writer_name="html")['html_body']
 
     return flask.jsonify(info=err.getvalue().replace("<string>:", ""),
                          content=content.strip())
