@@ -123,10 +123,10 @@ def rst():
         return "rst is not supported", 404
 
     err = StringIO.StringIO()
-    overrides = {"warning_stream": err}
+    overrides = {"warning_stream": err, "leave-comments": True, "initial-header-level": 2}
     content = docutils.core.publish_parts(flask.request.data,
                                           settings_overrides=overrides,
-                                          writer_name="html")['body']
+                                          writer_name="html")['html_body']
 
     return flask.jsonify(info=err.getvalue().replace("<string>:", ""),
                          content=content.strip())
@@ -6757,7 +6757,8 @@ post '/asciidoctor' do
   captured_output = capture_stderr do
     content = Asciidoctor.convert request.body.read,
                                   header_footer: false,
-                                  safe: Asciidoctor::SafeMode::SAFE
+                                  safe: Asciidoctor::SafeMode::SAFE,
+                                  trace: true
   end
 
   response = { info: if captured_output.nil?
