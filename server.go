@@ -198,6 +198,26 @@ func (s *shimServer) hasError() bool {
 	return len(s.errors) > 0
 }
 
+func (s *shimServer) formatIsSupported(f Format) bool {
+	s.RLock()
+	defer s.RUnlock()
+
+	for _, supportedFormat := range s.supportedFormats {
+		if f == supportedFormat {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *shimServer) getURI(path string) string {
+	s.RLock()
+	defer s.RUnlock()
+
+	return strings.Join([]string{s.uri, path}, "/")
+}
+
 func (s *shimServer) getError() error {
 	s.RLock()
 	defer s.RUnlock()
@@ -212,7 +232,7 @@ func (s *shimServer) getError() error {
 func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
 	s.startIfNeeded()
 
-	response, err := http.DefaultClient.Post(s.uri+string(format), "text/plain", bytes.NewReader(input))
+	response, err := http.DefaultClient.Post(s.getURI(string(format)), "text/plain", bytes.NewReader(input))
 	if err != nil {
 		return nil, err
 	}
@@ -246,15 +266,13 @@ func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
 }
 
 func (s *shimServer) supportsConversion(format Format) bool {
-	for _, supportedFormat := range s.supportedFormats {
-		if format == supportedFormat {
-			return true
-		}
+	if s.formatIsSupported(format) {
+		return true
 	}
 
 	s.startIfNeeded()
 
-	response, err := http.DefaultClient.Get(s.uri + "support/" + string(format))
+	response, err := http.DefaultClient.Get(s.getURI("support/" + string(format)))
 	if err != nil {
 		return false
 	}
@@ -263,6 +281,9 @@ func (s *shimServer) supportsConversion(format Format) bool {
 		return false
 	}
 
+	s.Lock()
 	s.supportedFormats = append(s.supportedFormats, format)
+	s.Unlock()
+
 	return true
 }
