@@ -3,8 +3,8 @@ language: go
 env:
     - GIMME_ARCH=amd64
 go:
-  - 1.7.6
   - 1.8.3
+  - 1.9
   - tip
 os:
   - linux
@@ -13,5 +13,5 @@ matrix:
   allow_failures:
     - go: tip
   fast_finish: true
-script: 
+script:
   - go test -race -v ./...
