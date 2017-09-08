@@ -80,6 +80,7 @@ func init() {
 	serviceFiles = map[string][]byte{
 		pythonService: []byte(`
 import logging
+import sys
 
 try:
     import cStringIO as StringIO
@@ -159,7 +160,7 @@ def overview():
 
 
 if __name__ == '__main__':
-    app.run(port=1414)
+    app.run(port=sys.argv[1])
 `),
 		asciidoc: bytes.Replace([]byte(`
 #!/usr/bin/env python
@@ -6717,23 +6718,16 @@ rescue LoadError
 end
 
 def capture_stderr
-  # The output stream must be an IO-like object. In this case we capture it in
-  # an in-memory IO object so we can return the string value. You can assign any
-  # IO object here.
-  previous_stderr = $stderr
   $stderr = StringIO.new
   yield
   $stderr.string
-ensure
-  # Restore the previous value of stderr (typically equal to STDERR).
-  $stderr = previous_stderr
 end
 
-enable :quiet, :lock
-disable :logging, :threaded
+enable :quiet
+disable :logging
 set :environment, :production
 set :bind, 'localhost'
-set :port, 1515
+set :port, ARGV[0]
 
 get '/' do
   response = { status: 'running', asciidoctor: adoctor_supported }
@@ -6744,8 +6738,9 @@ end
 get '/support/:format' do
   content_type('text/plain')
   if params['format'] == 'asciidoctor'
-    return 'supported\n'
+    return "supported\n"
   else
+    status 400
     return "#{params['format']} is not supported\n"
   end
 end

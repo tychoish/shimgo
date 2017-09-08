@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,7 @@ type shimServer struct {
 	running          bool
 	terminated       bool
 	pid              int
+	port             string
 	uri              string
 	workingDirectory string
 	errors           []string
@@ -46,9 +48,15 @@ func (s *shimServer) setup() {
 	s.running = false
 	s.terminated = false
 	s.pid = 0
-	s.uri = string(s.backend)
 	s.errors = []string{}
 	s.closed = make(chan struct{})
+
+	port, err := findAvailablePort()
+	if err != nil {
+		s.errors = append(s.errors, err.Error())
+	}
+	s.port = strconv.Itoa(port.Port)
+	s.uri = "http://localhost:" + s.port
 
 	tmpdir, err := ioutil.TempDir("", "shimgo-")
 	if err != nil {
@@ -87,7 +95,7 @@ func (s *shimServer) start() {
 
 		defer os.RemoveAll(s.workingDirectory)
 
-		cmd := s.backend.getCommand(s.workingDirectory)
+		cmd := s.backend.getCommand(s.workingDirectory, s.port)
 		if cmd == nil {
 			s.errors = append(s.errors, "unsupported backend")
 			s.Unlock()
