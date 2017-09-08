@@ -97,14 +97,24 @@ func (s *shimServer) start() {
 
 		err := cmd.Start()
 
-		// should replace the sleep with a better way to make
-		// sure that the process is running
-		time.Sleep(500 * time.Millisecond)
-
 		if err != nil {
 			s.errors = append(s.errors, err.Error())
 			s.Unlock()
 			ready <- struct{}{}
+			return
+		}
+
+		err = retry(10, 100*time.Millisecond, func() (err error) {
+			response, err := http.DefaultClient.Get(s.uri)
+			if err == nil && response.StatusCode != 200 {
+				err = fmt.Errorf("non-200 status code")
+			}
+			return
+		})
+		if err != nil {
+			s.errors = append(s.errors, "failed to ping backend "+err.Error())
+			s.Unlock()
+			close(ready)
 			return
 		}
 
