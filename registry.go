@@ -1,6 +1,7 @@
 package shimgo
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -47,19 +48,34 @@ func (s *servers) reset() {
 	}
 }
 
-func (s *servers) getServer(f Format) (*shimServer, bool) {
+func (s *servers) hasSupport(f Format) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	server, ok := s.backends[f]
-
 	if !ok {
-		return nil, false
+		return false
 	}
 
 	if !server.supportsConversion(f) {
-		return nil, false
+		return false
 	}
 
-	return server, true
+	return true
+}
+
+func (s *servers) getServer(f Format) (*shimServer, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	server, ok := s.backends[f]
+	if !ok {
+		return nil, fmt.Errorf("server for '%s' is not registered", f)
+	}
+
+	if !server.supportsConversion(f) {
+		return nil, fmt.Errorf("registered server for '%s' does not support conversion", f)
+	}
+
+	return server, nil
 }
