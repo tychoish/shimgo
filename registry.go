@@ -57,7 +57,7 @@ func (s *servers) hasSupport(f Format) bool {
 		return false
 	}
 
-	if !server.supportsConversion(f) {
+	if err := server.supportsConversion(f); err != nil {
 		return false
 	}
 
@@ -73,8 +73,8 @@ func (s *servers) getServer(f Format) (*shimServer, error) {
 		return nil, fmt.Errorf("server for '%s' is not registered", f)
 	}
 
-	if !server.supportsConversion(f) {
-		return nil, fmt.Errorf("registered server for '%s' does not support conversion", f)
+	if err := server.supportsConversion(f); err != nil {
+		return nil, fmt.Errorf("registered server for '%s' does not support conversion [%s]", f, err.Error())
 	}
 
 	return server, nil

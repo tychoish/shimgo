@@ -265,25 +265,25 @@ func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
 	return []byte(out), nil
 }
 
-func (s *shimServer) supportsConversion(format Format) bool {
+func (s *shimServer) supportsConversion(format Format) error {
 	if s.formatIsSupported(format) {
-		return true
+		return nil
 	}
 
 	s.startIfNeeded()
 
 	response, err := http.DefaultClient.Get(s.getURI("support/" + string(format)))
 	if err != nil {
-		return false
+		return fmt.Errorf("got error checking conversion server: %s", err.Error())
 	}
 
 	if response.StatusCode != 200 {
-		return false
+		return fmt.Errorf("got '%s' checking conversion server", response.Status)
 	}
 
 	s.Lock()
 	s.supportedFormats = append(s.supportedFormats, format)
 	s.Unlock()
 
-	return true
+	return nil
 }
