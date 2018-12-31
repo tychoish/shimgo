@@ -9,8 +9,8 @@ import (
 type backend string
 
 const (
-	pythonServer backend = "http://localhost:1414/"
-	rubyServer           = "http://localhost:1515/"
+	pythonServer backend = "http://localhost:1414"
+	rubyServer           = "http://localhost:1515"
 )
 
 func (b backend) writeFiles(workingDirectory string) error {
