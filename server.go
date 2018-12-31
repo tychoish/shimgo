@@ -230,7 +230,9 @@ func (s *shimServer) getError() error {
 }
 
 func (s *shimServer) doConversion(format Format, input []byte) ([]byte, error) {
-	s.startIfNeeded()
+	if err := s.startIfNeeded(); err != nil {
+		return nil, fmt.Errorf("error problem starting '%s' server: %s", format, err.Error())
+	}
 
 	response, err := http.DefaultClient.Post(s.getURI(string(format)), "text/plain", bytes.NewReader(input))
 	if err != nil {
@@ -270,7 +272,10 @@ func (s *shimServer) supportsConversion(format Format) error {
 		return nil
 	}
 
-	s.startIfNeeded()
+	if err := s.startIfNeeded(); err != nil {
+		return fmt.Errorf("problem starting service for '%s': %s", format, err.Error())
+
+	}
 
 	response, err := http.DefaultClient.Get(s.getURI("support/" + string(format)))
 	if err != nil {
