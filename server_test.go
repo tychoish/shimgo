@@ -109,7 +109,7 @@ func TestStartIfNeeded(t *testing.T) {
 		assert(t, s.pid == 0, "pid isnt set because server is running")
 		assert(t, !s.hasError(), "no errrors")
 
-		cleanup(t, s)
+		s.setup()
 	}
 }
 
