@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 )
 
-type backend string
+type backend int
 
 const (
-	pythonServer backend = "http://localhost:1414/"
-	rubyServer           = "http://localhost:1515/"
+	pythonServer backend = iota
+	rubyServer
 )
 
 func (b backend) writeFiles(workingDirectory string) error {
@@ -24,12 +24,12 @@ func (b backend) writeFiles(workingDirectory string) error {
 	}
 }
 
-func (b backend) getCommand(workingDirectory string) *exec.Cmd {
+func (b backend) getCommand(workingDirectory, port string) *exec.Cmd {
 	switch b {
 	case pythonServer:
-		return exec.Command(getPython2(), filepath.Join(workingDirectory, pythonService))
+		return exec.Command(getPython2(), filepath.Join(workingDirectory, pythonService), port)
 	case rubyServer:
-		return exec.Command(getRuby(), filepath.Join(workingDirectory, rubyService))
+		return exec.Command(getRuby(), filepath.Join(workingDirectory, rubyService), port)
 	default:
 		return nil
 	}

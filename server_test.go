@@ -78,7 +78,8 @@ func TestStartIfNeeded(t *testing.T) {
 		require(t, !s.running, "server shouldn't be running at start, but is", fmt.Sprintf("%+v", s))
 		assert(t, !s.isRunning(), "isRunning method should reflect that server is not yet running")
 
-		s.startIfNeeded()
+		err := s.startIfNeeded()
+		require(t, err == nil, "server should not error when starting", fmt.Sprintf("%+v", err))
 		require(t, s.running, "server should be running after starting, but isn't", fmt.Sprintf("%+v", s))
 		assert(t, s.isRunning(), "isRunning method should reflect that server is running")
 		assert(t, s.pid != 0, "pid is set because server is running")
@@ -89,7 +90,9 @@ func TestStartIfNeeded(t *testing.T) {
 		assert(t, s.hasError(), "error should be here")
 		assert(t, !s.running, "server shouldn't start if it has errors")
 		assert(t, !s.isRunning(), "server isn't running and shouldn't report that")
-		s.startIfNeeded()
+
+		err = s.startIfNeeded()
+		require(t, err != nil, "server should have mocked error")
 		assert(t, !s.running, "server shouldn't start if it has errors")
 		assert(t, !s.isRunning(), "server isn't running and shouldn't report that")
 		assert(t, s.pid == 0, "pid isnt set because server is running")
@@ -100,11 +103,13 @@ func TestStartIfNeeded(t *testing.T) {
 		s.running = true
 		assert(t, s.isRunning(), "test faked running attribute and the method should reflect that")
 		assert(t, !s.hasError(), "no errrors")
-		s.startIfNeeded()
+
+		err = s.startIfNeeded()
+		require(t, err == nil, "server should not error when starting", fmt.Sprintf("%+v", err))
 		assert(t, s.pid == 0, "pid isnt set because server is running")
 		assert(t, !s.hasError(), "no errrors")
 
-		cleanup(t, s)
+		s.setup()
 	}
 }
 
